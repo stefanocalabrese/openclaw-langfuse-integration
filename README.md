@@ -209,6 +209,20 @@ This setup is designed for budget-conscious deployments:
 
 Estimated cost: **$5-20/month** on most cloud providers.
 
+### 🖥️ Tested Hardware
+
+This project has been built and tested on:
+
+| Component | OpenClaw Host | Langfuse Host |
+|-----------|---------------|---------------|
+| **Machine** | Lenovo ThinkCentre | Cloud VM |
+| **CPU** | Intel i5 | 2 vCPU |
+| **RAM** | 16 GB DDR3 | 4 GB |
+| **Storage** | SSD | 80 GB HDD |
+| **OS** | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS |
+
+> 💡 Langfuse runs comfortably on a modest cloud VM — no need for expensive infrastructure.
+
 ## 📖 Full Guide
 
 For detailed step-by-step instructions including:
