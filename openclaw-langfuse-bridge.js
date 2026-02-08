@@ -2,8 +2,8 @@
 import { spawn } from 'child_process';
 
 const LANGFUSE_HOST = 'https://langfuse.tideflowai.net';
-const LANGFUSE_PUBLIC_KEY = 'pk-lf-6e407d3e-f8f3-438e-9d40-f246fc55c64b';
-const LANGFUSE_SECRET_KEY = 'sk-lf-c863bf74-8de0-4583-8df1-bad7d7aad502';
+const LANGFUSE_PUBLIC_KEY = 'pk-lf-12345678-90ab-cdef-1234-567890abcdef'; // Replace with your actual public key
+const LANGFUSE_SECRET_KEY = 'sk-lf-12345678-90ab-cdef-1234-567890abcdef'; // Replace with your actual secret key
 const activeRuns = new Map();
 const journal = spawn('journalctl', ['--user', '-u', 'openclaw-gateway.service', '-f', '-o', 'json', '--all']);
 
