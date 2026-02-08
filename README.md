@@ -31,6 +31,23 @@
    (Chat UI)                                          (Traces & Metrics)
 ```
 
+## 📸 Screenshots
+
+### Traces List
+All your OpenClaw conversations appear as traces in Langfuse:
+
+![Langfuse Tracing List](images/langfuse-traces-list.png)
+
+### Trace Details with LLM Output
+Each trace captures the assistant response, latency, and metadata:
+
+![Trace Detail with Output](images/langfuse-trace-detail-output.png)
+
+### Metadata View
+Model name, session ID, and duration are captured for every interaction:
+
+![Trace Metadata](images/langfuse-trace-metadata.png)
+
 ## ⚡ Quick Start
 
 ### Prerequisites
@@ -216,7 +233,7 @@ This project has been built and tested on:
 | Component | OpenClaw Host | Langfuse Host |
 |-----------|---------------|---------------|
 | **Machine** | Lenovo ThinkCentre | Cloud VM |
-| **CPU** | Intel i5 | 2 vCPU |
+| **CPU** | Intel i5 6th gen | 2 vCPU |
 | **RAM** | 16 GB DDR3 | 4 GB |
 | **Storage** | SSD | 80 GB HDD |
 | **OS** | Ubuntu 24.04 LTS | Ubuntu 24.04 LTS |
