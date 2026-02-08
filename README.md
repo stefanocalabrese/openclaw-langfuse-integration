@@ -263,4 +263,4 @@ MIT License — feel free to use this in your own projects.
 
 ---
 
-**Built with ☕ because OpenClaw + Langfuse should just work together.**
+**Built with ❤️ because OpenClaw + Langfuse should just work together.**
