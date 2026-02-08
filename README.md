@@ -1,231 +1,165 @@
-# openclaw-langfuse-integration
+# 🦞 OpenClaw + Langfuse Integration
 
-# Complete Guide: OpenClaw + Langfuse Integration on Ubuntu
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://docs.docker.com/compose/)
 
-## Table of Contents
-1. [OpenClaw Installation](#1-openclaw-installation)
-2. [Langfuse Installation with Docker](#2-langfuse-installation-with-docker)
-3. [Nginx Reverse Proxy Setup](#3-nginx-reverse-proxy-setup)
-4. [OpenClaw → Langfuse Bridge Script](#4-openclaw--langfuse-bridge-script)
-5. [Troubleshooting](#5-troubleshooting)
+> **Add LLM observability to OpenClaw with a custom bridge script** — since there's no native integration, I built one.
 
----
+## 🎯 What is This?
 
-## 1. OpenClaw Installation
+[OpenClaw](https://github.com/nicekid1/openclaw-gateway) is a lightweight LLM gateway that supports multiple providers (Google, OpenAI, Anthropic). [Langfuse](https://langfuse.com) is an open-source LLM observability platform for tracing, monitoring, and debugging AI applications.
+
+**The Problem:** OpenClaw doesn't have built-in Langfuse support, so you can't track your LLM calls out of the box.
+
+**The Solution:** This repo provides:
+- 🔌 **Bridge Script** — A Node.js script that monitors OpenClaw logs and sends traces to Langfuse
+- 🐳 **Docker Compose Stack** — Production-ready Langfuse v3 setup (Postgres, ClickHouse, Redis, MinIO)
+- 📖 **Complete Guide** — Step-by-step instructions for self-hosting on a budget Ubuntu VPS
+
+## 📊 Architecture
+
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│   OpenClaw      │────▶│   Bridge Script      │────▶│    Langfuse     │
+│    Gateway      │logs │ (openclaw-langfuse-  │API  │  (Self-hosted)  │
+│                 │     │  bridge.js)          │     │                 │
+└─────────────────┘     └──────────────────────┘     └─────────────────┘
+        │                                                     │
+        │                                                     │
+   WebSocket                                           Web Dashboard
+   (Chat UI)                                          (Traces & Metrics)
+```
+
+## ⚡ Quick Start
 
 ### Prerequisites
-- Ubuntu 20.04+ or Debian-based Linux
-- Node.js 18+ (required for OpenClaw)
-- systemd (for service management)
 
-### 1.1 Install Node.js with NVM
+- Ubuntu 20.04+ (or any Linux with systemd)
+- Node.js 18+
+- Docker & Docker Compose
+- OpenClaw running as a systemd service
+
+### 1. Deploy Langfuse Stack
 
 ```bash
-# Install NVM (Node Version Manager)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+# Clone this repo
+git clone https://github.com/YOUR_USERNAME/openclaw-langfuse-integration.git
+cd openclaw-langfuse-integration/docker
 
-# Reload shell configuration
-source ~/.bashrc
+# Create environment file
+cp .env.example .env
+nano .env  # Fill in your secrets (see Environment Variables below)
 
-# Install Node.js 20 (LTS)
-nvm install 20
-nvm use 20
-nvm alias default 20
+# Start the stack
+docker compose up -d
+```
 
-# Verify installation
-node --version  # Should show v20.x.x
-npm --version
-1.2 Install OpenClaw Gateway
-bash
-# Install OpenClaw globally
-npm install -g openclaw-gateway
+### 2. Configure the Bridge Script
 
-# Verify installation
-openclaw-gateway --version
-1.3 Configure OpenClaw
-bash
-# Create config directory
-mkdir -p ~/.openclaw
+```bash
+# Edit the bridge script with your Langfuse credentials
+nano openclaw-langfuse-bridge.js
+```
 
-# Initialize OpenClaw configuration
-openclaw-gateway init
+Update these values:
+```javascript
+const LANGFUSE_HOST = 'https://langfuse.yourdomain.com';
+const LANGFUSE_PUBLIC_KEY = 'pk-lf-your-public-key';
+const LANGFUSE_SECRET_KEY = 'sk-lf-your-secret-key';
+```
 
-# The config is stored in: ~/.openclaw/openclaw.json
-Edit the configuration:
+### 3. Run the Bridge
 
-bash
-nano ~/.openclaw/openclaw.json
-Key settings to configure:
+```bash
+# Install PM2 for process management
+npm install -g pm2
 
-port: Default is 18789
+# Start the bridge
+pm2 start openclaw-langfuse-bridge.js --name "langfuse-bridge"
+pm2 save
+pm2 startup  # Follow the instructions to enable on boot
+```
 
-provider: Choose your LLM provider (google, openai, anthropic)
+## 📁 Repository Structure
 
-apiKey: Your API key for the provider
+```
+├── openclaw-langfuse-bridge.js          # 🔌 The bridge script (main integration)
+├── openclaw-langfuse-complete-guide.md  # 📖 Detailed installation guide
+├── docker/
+│   └── docker-compose.yml               # 🐳 Langfuse v3 production stack
+└── README.md                            # You are here
+```
 
-model: Model name (e.g., gemini-2.5-flash-preview-09-2025)
+## 🐳 Langfuse Stack Components
 
-Example config:
+The Docker Compose setup includes everything you need for self-hosting Langfuse v3:
 
-json
-{
-  "port": 18789,
-  "assistant": {
-    "name": "Stebbot",
-    "avatar": "🤙"
-  },
-  "agent": {
-    "provider": "google",
-    "model": "gemini-2.5-flash-preview-09-2025",
-    "apiKey": "YOUR_GOOGLE_API_KEY"
-  }
-}
-1.4 Set up OpenClaw as Systemd Service
-Create the service file:
+| Service | Purpose | Port |
+|---------|---------|------|
+| **langfuse-web** | Main Langfuse application | 3000 |
+| **langfuse-worker** | Background job processing | - |
+| **postgres** | Primary database (PostgreSQL 17) | - |
+| **clickhouse** | Analytics database | - |
+| **redis** | Caching & queues | - |
+| **minio** | S3-compatible object storage | - |
 
-bash
-mkdir -p ~/.config/systemd/user
-nano ~/.config/systemd/user/openclaw-gateway.service
-Add this content:
+All internal services communicate through a private Docker network. Only the web UI is exposed.
 
-text
-[Unit]
-Description=OpenClaw Gateway Service
-After=network.target
+## 🔧 Environment Variables
 
-[Service]
-Type=simple
-ExecStart=/home/YOUR_USERNAME/.nvm/versions/node/v20.x.x/bin/openclaw-gateway start
-Restart=always
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=openclaw-gateway
+Create a `.env` file in the `docker/` directory:
 
-[Install]
-WantedBy=default.target
-Important: Replace the ExecStart path with your actual path:
+```bash
+# Database
+POSTGRES_PASSWORD=your-secure-postgres-password
 
-bash
-# Find the correct path
-which openclaw-gateway
-# Use that full path in the service file
-Enable and start the service:
+# ClickHouse
+CLICKHOUSE_PASSWORD=your-secure-clickhouse-password
 
-bash
-# Reload systemd
-systemctl --user daemon-reload
+# Redis
+REDIS_PASSWORD=your-secure-redis-password
 
-# Enable service to start on boot
-systemctl --user enable openclaw-gateway.service
+# MinIO (S3 storage)
+MINIO_PASSWORD=your-secure-minio-password
 
-# Start the service
-systemctl --user start openclaw-gateway.service
+# Langfuse
+LANGFUSE_URL=https://langfuse.yourdomain.com
+NEXTAUTH_SECRET=$(openssl rand -base64 32)
+SALT=$(openssl rand -base64 32)
+ENCRYPTION_KEY=$(openssl rand -hex 32)
 
-# Check status
-systemctl --user status openclaw-gateway.service
+# Initial user/project (optional)
+LANGFUSE_INIT_ORG_NAME=MyOrg
+LANGFUSE_INIT_PROJECT_ID=my-project
+LANGFUSE_INIT_PROJECT_NAME=OpenClaw
+LANGFUSE_INIT_USER_EMAIL=admin@example.com
+LANGFUSE_INIT_USER_NAME=admin
+LANGFUSE_INIT_USER_PASSWORD=your-admin-password
+```
 
-# View logs
-journalctl --user -u openclaw-gateway.service -f
-1.5 Access OpenClaw UI
-Open your browser and navigate to:
+## 🌐 Nginx Reverse Proxy
 
-text
-http://localhost:18789
-You should see the OpenClaw chat interface.
+For production, run Langfuse behind Nginx with SSL:
 
-2. Langfuse Installation with Docker
-2.1 Prerequisites
-bash
-# Update system
-sudo apt update && sudo apt upgrade -y
-
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Add your user to docker group (to run without sudo)
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Install Docker Compose
-sudo apt install docker-compose -y
-
-# Verify installation
-docker --version
-docker-compose --version
-2.2 Create Langfuse Directory
-bash
-mkdir -p ~/langfuse
-cd ~/langfuse
-2.3 Create Docker Compose File
-bash
-nano docker-compose.yml
-
-You can find the docker-compose in the repo.
-
-Important: Generate secure secrets:
-
-bash
-# Generate NEXTAUTH_SECRET
-openssl rand -base64 32
-
-# Generate SALT
-openssl rand -base64 32
-
-# Update the .env with these values
-2.4 Start Langfuse
-bash
-cd ~/langfuse
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f langfuse-server
-
-# Check status
-docker-compose ps
-Langfuse should now be running on http://localhost:3001
-
-2.5 Initial Langfuse Setup
-With the init environment variables in the langfuse-web container, you pre-create project and credentials, but for openclaw you better create new API Keys as follows:
-
-Go to Settings → API Keys
-
-Create a new API key pair:
-
-Public Key: pk-lf-...
-
-Secret Key: sk-lf-...
-
-Save these keys for later use
-
-3. Nginx Reverse Proxy Setup
-3.1 Install Nginx
-bash
-sudo apt update
-sudo apt install nginx -y
-
-# Start and enable Nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
-3.2 Configure Domain (if using)
-If you have a domain, set up DNS A record pointing to your server IP.
-
-3.3 Create Nginx Configuration
-bash
-sudo nano /etc/nginx/sites-available/langfuse
-Add this configuration:
-
-text
+```nginx
 server {
     listen 80;
-    server_name langfuse.yourdomain.com;  # Change this
+    server_name langfuse.yourdomain.com;
+    return 301 https://$server_name$request_uri;
+}
 
-    # Increase upload size for large traces
+server {
+    listen 443 ssl http2;
+    server_name langfuse.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/langfuse.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/langfuse.yourdomain.com/privkey.pem;
+
     client_max_body_size 50M;
 
     location / {
-        proxy_pass http://localhost:3001;
+        proxy_pass http://localhost:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -233,372 +167,69 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-        
-        # Timeouts for long-running requests
-        proxy_connect_timeout 300;
-        proxy_send_timeout 300;
         proxy_read_timeout 300;
-        send_timeout 300;
     }
 }
-Enable the site:
+```
 
-bash
-# Create symbolic link
-sudo ln -s /etc/nginx/sites-available/langfuse /etc/nginx/sites-enabled/
-
-# Test configuration
-sudo nginx -t
-
-# Reload Nginx
-sudo systemctl reload nginx
-3.4 Install SSL Certificate (Let's Encrypt)
-bash
-# Install Certbot
+Get SSL certificates with Certbot:
+```bash
 sudo apt install certbot python3-certbot-nginx -y
-
-# Get SSL certificate
 sudo certbot --nginx -d langfuse.yourdomain.com
+```
 
-# Test auto-renewal
-sudo certbot renew --dry-run
-Certbot automatically updates your Nginx config to use HTTPS.
+## 📊 What Gets Tracked
 
-3.5 Update Docker Compose for HTTPS
-bash
-cd ~/langfuse
-nano docker-compose.yml
-Update the NEXTAUTH_URL:
+The bridge script captures the following from OpenClaw logs:
 
-text
-NEXTAUTH_URL: https://langfuse.yourdomain.com
-Restart Langfuse:
+| Data | Captured | Notes |
+|------|----------|-------|
+| ✅ Model name | Yes | e.g., `gemini-2.5-flash` |
+| ✅ Response time | Yes | Duration in milliseconds |
+| ✅ Session ID | Yes | For conversation grouping |
+| ✅ Assistant output | Yes | LLM response text |
+| ❌ User input | No | OpenClaw doesn't log it (WebSocket-only) |
+| ❌ Token counts | No | Not available in logs |
 
-bash
-docker-compose down
-docker-compose up -d
+## ⚠️ Limitations
 
-4. OpenClaw → Langfuse Bridge Script
-4.1 Why We Need This
+- **User prompts are not captured** — OpenClaw uses WebSocket for chat and doesn't log user messages
+- **Token usage unavailable** — OpenClaw doesn't expose token counts in logs
+- **Requires systemd** — The bridge reads from journalctl; won't work with other init systems
 
-## OpenClaw doesn't have native Langfuse integration. The bridge script:
+## 💰 Cost-Effective Self-Hosting
 
-Monitors OpenClaw systemd logs in real-time
+This setup is designed for budget-conscious deployments:
 
-Extracts conversation data (model, timing, output)
+- ✅ No load balancers needed
+- ✅ No managed database services
+- ✅ Single Ubuntu VPS is sufficient (4GB+ RAM recommended)
+- ✅ Nginx handles SSL termination
+- ✅ All data stored locally with Docker volumes
 
-Sends traces to Langfuse API
+Estimated cost: **$5-20/month** on most cloud providers.
 
-Runs continuously as a background service
+## 📖 Full Guide
 
-Limitations:
+For detailed step-by-step instructions including:
+- Installing OpenClaw from scratch
+- Setting up systemd services
+- Configuring SSL certificates
+- Troubleshooting common issues
 
-User input is NOT captured (OpenClaw doesn't log it)
+👉 See [openclaw-langfuse-complete-guide.md](openclaw-langfuse-complete-guide.md)
 
-Only assistant output, timing, and metadata are tracked
+## 🤝 Contributing
 
-4.2 Install PM2 (Process Manager)
-bash
-npm install -g pm2
+Contributions are welcome! Feel free to:
+- Report bugs or issues
+- Suggest improvements to the bridge script
+- Share your deployment configurations
 
-# Enable PM2 to start on boot
-pm2 startup
-# Follow the command it shows
-4.3 Create the Bridge Script
-bash
-nano ~/openclaw-langfuse-bridge.js
+## 📄 License
 
-The script is in the repo.
+MIT License — feel free to use this in your own projects.
 
+---
 
-4.4 Configure the Script
-Update these values in the script:
-
-javascript
-const LANGFUSE_HOST = 'https://langfuse.yourdomain.com';  // Your Langfuse URL
-const LANGFUSE_PUBLIC_KEY = 'pk-lf-...';                   // From Langfuse Settings
-const LANGFUSE_SECRET_KEY = 'sk-lf-...';                   // From Langfuse Settings
-
-Make it executable:
-
-bash
-chmod +x ~/openclaw-langfuse-bridge.js
-
-4.5 Start with PM2
-bash
-# Start the bridge
-pm2 start ~/openclaw-langfuse-bridge.js --name openclaw-langfuse-bridge
-
-# Save PM2 configuration
-pm2 save
-
-# View logs
-pm2 logs openclaw-langfuse-bridge
-
-# Check status
-pm2 status
-4.6 Test the Integration
-Open OpenClaw UI: http://localhost:18789
-
-Send a message to the assistant
-
-Check PM2 logs: pm2 logs openclaw-langfuse-bridge
-
-You should see: 📊 Trace started, 💬 Captured, ✅ Sent to Langfuse
-
-Open Langfuse UI: https://langfuse.yourdomain.com
-
-Go to your project → Traces
-
-You should see the conversation trace with:
-
-Timestamp
-
-Model name
-
-Duration
-
-Assistant output
-
-Session ID
-
-5. Troubleshooting
-OpenClaw Issues
-Service won't start:
-
-bash
-# Check logs
-journalctl --user -u openclaw-gateway.service -n 50
-
-# Common issues:
-# - Wrong Node.js path in service file
-# - Missing API key in config
-# - Port already in use
-Can't access UI:
-
-bash
-# Check if OpenClaw is running
-systemctl --user status openclaw-gateway.service
-
-# Check what port it's using
-cat ~/.openclaw/openclaw.json | grep port
-
-# Check if port is open
-ss -tlnp | grep 18789
-Langfuse Issues
-Container won't start:
-
-bash
-cd ~/langfuse
-docker-compose logs langfuse-server
-
-# Common issues:
-# - Database connection failed (wait for healthcheck)
-# - Port 3001 already in use
-# - Missing environment variables
-Can't access Langfuse UI:
-
-bash
-# Check containers
-docker-compose ps
-
-# Check Nginx
-sudo nginx -t
-sudo systemctl status nginx
-
-# Check logs
-docker-compose logs -f
-SSL certificate issues:
-
-bash
-# Renew certificate
-sudo certbot renew
-
-# Check certificate status
-sudo certbot certificates
-Bridge Script Issues
-Script not capturing logs:
-
-bash
-# Check if PM2 is running
-pm2 status
-
-# Check logs
-pm2 logs openclaw-langfuse-bridge --lines 100
-
-# Verify OpenClaw is logging
-journalctl --user -u openclaw-gateway.service -f
-
-# Restart the bridge
-pm2 restart openclaw-langfuse-bridge
-Traces not appearing in Langfuse:
-
-bash
-# Check API keys are correct
-nano ~/openclaw-langfuse-bridge.js
-
-# Test Langfuse API manually
-curl -X POST https://langfuse.yourdomain.com/api/public/ingestion \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Basic $(echo -n 'pk-lf-...:sk-lf-...' | base64)" \
-  -d '{"batch":[]}'
-
-# Should return: {"successes":[],"errors":[]}
-Output is truncated:
-
-bash
-# Verify --all flag is in the script
-grep "'--all'" ~/openclaw-langfuse-bridge.js
-
-# If missing, add it:
-nano ~/openclaw-langfuse-bridge.js
-# In the spawn line, add '--all' to the array
-Useful Commands
-OpenClaw:
-
-bash
-# Restart service
-systemctl --user restart openclaw-gateway.service
-
-# View live logs
-journalctl --user -u openclaw-gateway.service -f
-
-# Check config
-cat ~/.openclaw/openclaw.json
-
-# Update OpenClaw
-npm update -g openclaw-gateway
-Langfuse:
-
-bash
-# Restart Langfuse
-cd ~/langfuse
-docker-compose restart
-
-# View logs
-docker-compose logs -f langfuse-server
-
-# Backup database
-docker exec langfuse-db pg_dump -U langfuse langfuse > langfuse-backup.sql
-
-# Update Langfuse
-docker-compose pull
-docker-compose up -d
-Bridge Script:
-
-bash
-# View logs
-pm2 logs openclaw-langfuse-bridge
-
-# Restart
-pm2 restart openclaw-langfuse-bridge
-
-# Stop
-pm2 stop openclaw-langfuse-bridge
-
-# Remove from PM2
-pm2 delete openclaw-langfuse-bridge
-
-# Update script and restart
-nano ~/openclaw-langfuse-bridge.js
-pm2 restart openclaw-langfuse-bridge
-System:
-
-bash
-# Check all services
-systemctl --user status openclaw-gateway.service
-sudo systemctl status nginx
-docker-compose ps
-pm2 status
-
-# Check ports
-ss -tlnp | grep -E "18789|3001|80|443"
-
-# Check disk space
-df -h
-
-# Check memory
-free -h
-Architecture Overview
-text
-┌─────────────────────────────────────────────────────────────┐
-│                         User Browser                        │
-│  http://localhost:18789  |  https://langfuse.yourdomain.com │
-└──────────────┬────────────────────────────┬─────────────────┘
-               │                            │
-               ▼                            ▼
-    ┌──────────────────┐         ┌──────────────────┐
-    │  OpenClaw UI     │         │  Nginx (80/443)  │
-    │  Port 18789      │         │  Reverse Proxy   │
-    └────────┬─────────┘         └────────┬─────────┘
-             │                            │
-             ▼                            ▼
-    ┌──────────────────┐         ┌──────────────────┐
-    │ openclaw-gateway │         │ Langfuse Server  │
-    │ (systemd user)   │         │ (Docker:3001)    │
-    └────────┬─────────┘         └────────┬─────────┘
-             │                            │
-             │ logs                       │
-             ▼                            ▼
-    ┌──────────────────┐         ┌──────────────────┐
-    │ systemd journal  │         │ PostgreSQL DB    │
-    │ (journalctl)     │         │ (Docker)         │
-    └────────┬─────────┘         └──────────────────┘
-             │
-             │ monitored by
-             ▼
-    ┌──────────────────┐
-    │ Bridge Script    │──────────HTTP POST────────┐
-    │ (PM2 managed)    │                           │
-    └──────────────────┘                           │
-                                                   │
-                                                   ▼
-                                          Langfuse Ingestion API
-
-Additional Notes
-Security Considerations
-API Keys: Store Langfuse keys securely, don't commit to git
-
-Firewall: Only expose necessary ports (80, 443)
-
-SSL: Always use HTTPS in production
-
-Database: Langfuse DB is only accessible to Docker network
-
-OpenClaw: Consider adding authentication if exposing publicly
-
-Performance
-Langfuse: PostgreSQL volume persists data across restarts
-
-Bridge: Minimal CPU/memory usage, processes logs in real-time
-
-OpenClaw: Performance depends on LLM provider rate limits
-
-Backup
-bash
-# Backup Langfuse database
-docker exec langfuse-db pg_dump -U langfuse langfuse > backup-$(date +%Y%m%d).sql
-
-# Backup OpenClaw config
-cp ~/.openclaw/openclaw.json ~/openclaw-backup-$(date +%Y%m%d).json
-
-# Backup bridge script
-cp ~/openclaw-langfuse-bridge.js ~/openclaw-langfuse-bridge-backup.js
-Monitoring
-Set up monitoring for:
-
-OpenClaw service uptime
-
-Langfuse container health
-
-Bridge script PM2 status
-
-Nginx access/error logs
-
-Disk space (Langfuse DB can grow)
-
-Credits:
-OpenClaw: https://github.com/openclaw/openclaw
-Langfuse: https://langfuse.com
-Tutorial Reference: https://www.codecademy.com/article/open-claw-tutorial-installation-to-first-chat-setup
+**Built with ☕ because OpenClaw + Langfuse should just work together.**
