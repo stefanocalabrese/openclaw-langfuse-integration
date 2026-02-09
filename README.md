@@ -101,11 +101,12 @@ pm2 startup  # Follow the instructions to enable on boot
 ## 📁 Repository Structure
 
 ```
-├── openclaw-langfuse-bridge.js          # 🔌 The bridge script (main integration)
-├── openclaw-langfuse-complete-guide.md  # 📖 Detailed installation guide
+├── otel-bridge
+|   └── openclaw-langfuse-bridge.js      # 🔌 The bridge script (main integration)
 ├── docker/
 │   └── docker-compose.yml               # 🐳 Langfuse v3 production stack
-└── README.md                            # You are here
+├── README.md                            # You are here
+├── openclaw-langfuse-complete-guide.md  # 📖 Detailed installation guide
 ```
 
 ## 🐳 Langfuse Stack Components
