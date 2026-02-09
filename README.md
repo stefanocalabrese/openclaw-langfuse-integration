@@ -61,7 +61,7 @@ Model name, session ID, and duration are captured for every interaction:
 
 ```bash
 # Clone this repo
-git clone https://github.com/YOUR_USERNAME/openclaw-langfuse-integration.git
+git clone https://github.com/stefanocalabrese/openclaw-langfuse-integration.git
 cd openclaw-langfuse-integration/docker
 
 # Create environment file
