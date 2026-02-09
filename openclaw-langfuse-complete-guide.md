@@ -610,7 +610,7 @@ free -h
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         User Browser                         │
+│                         User Browser                        │
 │  http://localhost:18789  |  https://langfuse.yourdomain.com │
 └──────────────┬────────────────────────────┬─────────────────┘
                │                            │
@@ -639,8 +639,8 @@ free -h
     │ Bridge Script    │──────────HTTP POST────────┐
     │ (PM2 managed)    │                           │
     └──────────────────┘                           │
-                                                    │
-                                                    ▼
+                                                   │
+                                                   ▼
                                           Langfuse Ingestion API
 ```
 
