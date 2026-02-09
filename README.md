@@ -17,6 +17,9 @@
 - 🐳 **Docker Compose Stack** — Production-ready Langfuse v3 setup (Postgres, ClickHouse, Redis, MinIO)
 - 📖 **Complete Guide** — Step-by-step instructions for self-hosting on a budget Ubuntu VPS
 
+## Read the full article on Medium
+https://medium.com/@stefcalabrese/whos-watching-the-watchman-bridging-openclaw-and-langfuse-for-agentic-control-ccc4c2b3858b 
+
 ## 📊 Architecture
 
 ```
