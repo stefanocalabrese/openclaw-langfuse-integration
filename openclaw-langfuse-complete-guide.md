@@ -696,4 +696,4 @@ Set up monitoring for:
 
 **Document Version**: 1.0  
 **Last Updated**: February 8, 2026  
-**Author**: Stefano (TideFlowAI)
+**Author**: Stefano Calabrese
